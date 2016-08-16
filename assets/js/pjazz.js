@@ -6,16 +6,11 @@ function pjazz( loadFrom, loadTo, linksFrom ) {
       winloc = window.location,
       pjlink = "";
 
-      loadFrom = loadFrom,
-      loadTo = loadTo,
-      linksFrom = linksFrom;
-
-
   // add off-the-shelf support for the momentum lib - https://github.com/PeteOfRepublic/momentum
   var momentum = doc.getElementById( 'momentum' );
 
   if ( momentum ) {
-    var style = document.createElement( 'style' );
+    var style = doc.createElement( 'style' );
     doc.head.appendChild( style );
   }
 
@@ -24,12 +19,10 @@ function pjazz( loadFrom, loadTo, linksFrom ) {
 
     // set the source element
     function doLinkSource( sourceElem, linksFrom ) {
-      if ( loadFrom == "" || loadFrom == null || loadFrom == undefined ) {
+      if ( loadFrom === "" || loadFrom === null || loadFrom === undefined ) {
         loadFrom = "body";
-        var sourceElem = loadFrom;
-      } else {
-        var sourceElem = loadFrom;
       }
+      sourceElem = loadFrom;
       doLinkTarget(); // pass the source to the next function, the target
     }
     doLinkSource(); // this triggers the first function automatically
@@ -38,7 +31,7 @@ function pjazz( loadFrom, loadTo, linksFrom ) {
 
     // set the target element
     function doLinkTarget() {
-      if ( loadTo == "" || loadTo == null || loadTo == undefined ) {
+      if ( loadTo === "" || loadTo === null || loadTo === undefined ) {
         loadTo = "body";
       }
       doLinks();
@@ -46,21 +39,22 @@ function pjazz( loadFrom, loadTo, linksFrom ) {
 
     // set the links - this is a function so we need to be able to call it again
     function doLinks() {
-      if ( linksFrom == "" || linksFrom == null || linksFrom == undefined || linksFrom == "body" ) {
+      var linkList = "",
+          tmpLinks = "";
+      if ( linksFrom === "" || linksFrom === null || linksFrom === undefined || linksFrom == "body" ) {
         linksFrom = "body";
-        var linkList = doc.getElementsByTagName( linksFrom )[ 0 ],
-            tmpLinks = linkList.getElementsByTagName( 'a' );
+        linkList = doc.getElementsByTagName( linksFrom )[ 0 ];
+        tmpLinks = linkList.getElementsByTagName( 'a' );
       } else {
-        var linkList = doc.getElementById( linksFrom ),
-            tmpLinks = linkList.getElementsByTagName( 'a' );
+        linkList = doc.getElementById( linksFrom );
+        tmpLinks = linkList.getElementsByTagName( 'a' );
       }
-
-          pjazzLinks = new Array();
-          externalLinks = new Array()
+      pjazzLinks = [];
+      externalLinks = [];
 
       for ( var i = 0; i < tmpLinks.length; i++ ) {
         link = tmpLinks[ i ];
-        if ( link.rel == "external" ) {
+        if ( link.rel == "external" || link.rel == "email" ) {
           externalLinks.push( link );
         } else {
           pjazzLinks.push( link );
@@ -70,88 +64,96 @@ function pjazz( loadFrom, loadTo, linksFrom ) {
       doLoad();
     }
 
-    function doLoad() {
-      for (var i = 0; i < pjazzLinks.length; i++ ) {
-        pjazzLinks[ i ].onclick = function( event ) {
-          event.preventDefault();
+    function linkHandler( linkToHandle ) {
+      linkToHandle.onclick = function( event ) {
+        event.preventDefault();
 
-          pjlink = this.href;
+        pjlink = this.href;
 
-          var getProt = winloc.protocol,
-              getHost = winloc.host,
-              getPort = winloc.port;
+        var getProt = winloc.protocol,
+            getHost = winloc.host,
+            getPort = winloc.port;
 
-          pjlink = pjlink.replace( getProt + "/", "" )
-                         .replace( getHost + "/", "" )
-                         .replace( getPort, "" );
+        pjlink = pjlink.replace( getProt + "/", "" )
+                       .replace( getHost + "/", "" )
+                       .replace( getPort, "" );
 
-          xhr.open( 'GET', pjlink, true );
-          xhr.send( null );
+        xhr.open( 'GET', pjlink, true );
+        xhr.send( null );
 
-          xhr.addEventListener( 'progress', updateProgress );
-          xhr.addEventListener( 'load', complete );
+        xhr.addEventListener( 'progress', updateProgress );
+        xhr.addEventListener( 'load', complete );
 
-          function updateProgress( event ) {
-            if ( event.lengthComputable ) {
-              var percentComplete = Math.round( ( event.loaded / event.total ) * 100 );
-              if ( momentum ) {
-                momentum.classList.add( "active" );
-                style.sheet.addRule( "#momentum.active::after", "width: " + percentComplete + "vw" );
-              }
-            } else {
-              console.log( "can't compute length of object" );
-            }
-          }
-
-          function complete( event ) {
+        function updateProgress( event ) {
+          if ( event.lengthComputable ) {
+            var percentComplete = Math.round( ( event.loaded / event.total ) * 100 );
             if ( momentum ) {
-              momentum.classList.remove( "active" );
+              momentum.classList.add( "active" );
+              style.sheet.addRule( "#momentum.active::after", "width: " + percentComplete + "vw" );
             }
-          }
-
-          xhr.onreadystatechange = function() {
-            var state = xhr.readyState,
-                status = xhr.status;
-
-            if ( state == 4 && status == 200 ){ // state loaded && server status 200 OK
-              doParse();
-            } else if (
-              state == 0 |
-              state == 1 |
-              state == 2 |
-              state == 3
-            ) {
-              // ignore these states
-            } else if ( status == 301 ) {
-              console.log( "This content has been permamently moved" );
-            } else if ( status == 302 ) {
-              console.log( "The server is sending a 302 http message but probably means a 303 and it has been temporarily moved" );
-            } else if ( status == 308 ) {
-              console.log( "This content has been permamently redirected" );
-            } else if ( status == 400 ) {
-              console.log( "Bad Request" );
-            } else if ( status == 401 ) {
-              console.log( "You are not authorised to see this content" );
-            } else if ( status == 403 ) {
-              console.log( "You are forbidden from seeing this content" );
-            } else if ( status == 404 ) {
-              console.log( "This content was not found" );
-            } else if ( status == 500 ) {
-              console.log( "There was a problem with the server" );
-            } else {
-              // if it doesn't fit in any of the above then print out the state and status
-              console.log( "readystate = ", state, "server status = ", state );
-            }
+          } else {
+            console.log( "can't compute length of object" );
           }
         }
-      }
+
+        function complete( event ) {
+          if ( momentum ) {
+            momentum.classList.remove( "active" );
+          }
+        }
+
+        xhr.onreadystatechange = function() {
+          var state = xhr.readyState,
+              status = xhr.status;
+
+          if ( state == 4 && status == 200 ){ // state loaded && server status 200 OK
+            doParse();
+          } else if (
+            state === 0 |
+            state === 1 |
+            state === 2 |
+            state === 3
+          ) {
+            // ignore these states
+          } else if ( status == 301 ) {
+            console.log( "This content has been permamently moved" );
+          } else if ( status == 302 ) {
+            console.log( "The server is sending a 302 http message but probably means a 303 and it has been temporarily moved" );
+          } else if ( status == 308 ) {
+            console.log( "This content has been permamently redirected" );
+          } else if ( status == 400 ) {
+            console.log( "Bad Request" );
+          } else if ( status == 401 ) {
+            console.log( "You are not authorised to see this content" );
+          } else if ( status == 403 ) {
+            console.log( "You are forbidden from seeing this content" );
+          } else if ( status == 404 ) {
+            console.log( "This content was not found" );
+          } else if ( status == 500 ) {
+            console.log( "There was a problem with the server" );
+          } else {
+            // if it doesn't fit in any of the above then print out the state and status
+            console.log( "readystate = ", state, "server status = ", state );
+          }
+        };
+      };
+    }
+
+    function doLoad() {
+      var j = pjazzLinks.length - 1;
+      do{
+        var linkToHandle = pjazzLinks[ j ];
+        linkHandler( linkToHandle );
+      } while( j-- );
     }
 
 
     function doParse() {
       targetElem = loadTo;
       var elemText = xhr.response,
-          elemNodes = "";
+          node = "",
+          elemNodes = "",
+          newTitle = "";
 
       // sanitise the response so we can actually get useful stuff out of it
       elemText = elemText.replace( /<!doctype html>/i, "" )
@@ -164,7 +166,7 @@ function pjazz( loadFrom, loadTo, linksFrom ) {
 
       elemNodes = tmpNodes.head.children; // change the page title - outside of the loop as it will be done no matter what
       for ( var i = 0; i < elemNodes.length; i++ ) {
-        var node = elemNodes[i];
+        node = elemNodes[i];
         if ( node.tagName.toLowerCase() == "title" ) {
           newTitle = node.innerText;
           doc.getElementsByTagName( 'title' )[ 0 ].innerText = newTitle;
@@ -185,9 +187,8 @@ function pjazz( loadFrom, loadTo, linksFrom ) {
         }
       } else {
         elemNodes = tmpNodes.body.children; // we have a target name so we have to iterate through it to find the content we want
-        for ( var i = 0; i < elemNodes.length; i++ ) {
-          var node = elemNodes[ i ],
-          newTitle = "";
+        for ( i = 0; i < elemNodes.length; i++ ) {
+          node = elemNodes[ i ];
           if ( node.id == targetElem ) {
             doc.getElementById( targetElem ).innerHTML = node.innerHTML;
           }
@@ -202,20 +203,31 @@ function pjazz( loadFrom, loadTo, linksFrom ) {
     // anything outside of the scope of the replaced content is covered by this function instead
     function prepareOutboundLinks() {
       var links = doc.body.getElementsByTagName( 'a' ),
-          externalLinks = new Array();
-      for ( var i = 0; i < links.length; i++ ) {
-        var link = links[ i ];
-        if ( link.rel == "external" ) {
-          externalLinks.push( link );
+          i = links.length - 1;
+          externalLinks = [];
+
+      do{
+        if ( links.length >= 0) {
+          var link = links[ i ];
+          if ( link.rel == "external" || link.rel == "email" ) {
+            externalLinks.push( link );
+          }
         }
-      }
-      for ( var j = 0; j < externalLinks.length; j++ ) {
-        externalLinks[ j ].onclick = function( event ) {
+      } while( i-- );
+
+      var j = externalLinks.length - 1;
+      function externalLink( eLink ){
+        eLink.onclick = function( event ) {
           event.preventDefault();
-          var eLink = this;
           window.open( eLink.href, eLink.innerHTML, '' );
-        }
+        };
       }
+      do{
+        if (externalLinks.length >=0 ) {
+          var eLink = externalLinks[ j ];
+          externalLink( eLink );
+        }
+      } while( j-- );
     }
     prepareOutboundLinks();
 
